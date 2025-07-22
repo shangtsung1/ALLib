@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"Jordan"
+	],
+	"copyright": "Copyright © 2025, Jordan",
+	"dependencies": {
+		"vibe-d": "~>0.10.2"
+	},
+	"description": "A minimal D application.",
+	"license": "ISC",
+	"name": "ald2"
+}

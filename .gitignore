@@ -1,0 +1,12 @@
+.dub
+*.so
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
+*.env
+.env
+*.png
+data.json
+ald2
