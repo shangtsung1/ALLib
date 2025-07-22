@@ -9,7 +9,7 @@ import vibe.vibe : runApplication,runTask;
 void main()
 {
 	ALSession session = ALSession.INSTANCE();
-	ALClient frumpyBrute = session.createClient("FrumpyBrute","USI");
+	ALClient frumpyBrute = session.createClient("FrumpyBrute");
 	auto frumpyBruteTaskHandle = runTask(() => initClient(frumpyBrute));
 	runApplication();
 }

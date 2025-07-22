@@ -16,7 +16,7 @@ import std.algorithm;
 import std.string;
 import std.array;
 import std.range;
-import std.regex : matchFirst, regex;
+import std.regex;
 import std.container;
 import std.typecons;
 
@@ -129,7 +129,8 @@ class ALClient{
         Object*[string] attachments;
         bool running;
         bool awaitingAuth;
-
+        long failTime = 15000;
+        bool failed = false;
     public:
         JSONValue serverInfo;
         JSONValue character;
@@ -175,7 +176,7 @@ class ALClient{
             long lastPing = lastEpoch();
             long lastUpdate = lastEpoch();
             long nextScriptTime = lastEpoch();
-            while(socket.connected && running){
+            while(socket.connected && running && !failed){
                 while(socket.dataAvailableForRead()) {
                     auto message = socket.receiveText();
                     processEngineIOMessage(message);
@@ -199,8 +200,8 @@ class ALClient{
                     nextScriptTime = lastEpoch() + waitDuration.total!"msecs";
                 }
             }
-            logError("Disconnected, waiting 15 seconds");
-            Thread.sleep(15000.msecs);                
+            logError("Disconnected, waiting ",failTime," seconds");
+            Thread.sleep(failTime.msecs);                
         }
     }
 
@@ -329,6 +330,13 @@ class ALClient{
                 case "game_error":
                     logError("GameError: "~msgs[0]);
                     if(msgs[0]== "Failed: ingame"){
+                        socket.close();
+                    }
+                    auto m = match(msgs[0], `Failed: wait_(\d+)_seconds`);
+                    if (m.hit) {
+                        int seconds = to!int(m.captures[1]);
+                        failTime = 1000*seconds;
+                        failed = true;
                         socket.close();
                     }
                     return;
