@@ -8,5 +8,18 @@
 	},
 	"description": "A minimal D application.",
 	"license": "ISC",
-	"name": "ald2"
+	"name": "ald2",
+		"configurations": [
+		{
+			"mainSourceFile": "source/app.d",
+			"name": "application",
+			"targetName": "adventureland",
+			"targetType": "executable"
+		},
+		{
+			"name": "cwrapper",
+			"targetName": "allib",
+			"targetType": "dynamicLibrary"
+		}
+	]
 }
