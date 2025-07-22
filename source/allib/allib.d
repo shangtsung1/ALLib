@@ -325,7 +325,7 @@ class ALClient{
     void parsePacket(string event,string[] msgs){
         try
         {
-            logInfo(event);
+            logVerb(event);
             switch(event){
                 case "game_error":
                     logError("GameError: "~msgs[0]);
