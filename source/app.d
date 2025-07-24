@@ -13,16 +13,16 @@ void main()
 	ALSession session = ALSession.INSTANCE();
 	ALClient frumpyBrute = session.createClient("FrumpyBrute");
 	new Thread(() => initClient(frumpyBrute)).start();
-	//new ALViewer(frumpyBrute,400,300).start();
+	new ALViewer(frumpyBrute,400,300).start();
 
 
 	ALClient frumpyRanger = session.createClient("FrumpyRanger");
 	new Thread(() => initClient(frumpyRanger)).start();
-	//new ALViewer(frumpyRanger,400,300).start();
+	new ALViewer(frumpyRanger,400,300).start();
 
 	ALClient frumpyHealer = session.createClient("FrumpyHealer");
 	new Thread(() => initClient(frumpyHealer)).start();
-	//new ALViewer(frumpyHealer,400,300).start();
+	new ALViewer(frumpyHealer,400,300).start();
 
 	runApplication();
 }

@@ -796,7 +796,7 @@ class ALClient{
     bool move(double x, double y, double fromX, double fromY) {
         if (!x.isFinite || !y.isFinite || !fromX.isFinite || !fromY.isFinite) return false;
         player.from_x = fromX;
-        player.from_x = fromY;
+        player.from_y = fromY;
         player.going_x = x;
         player.going_y = y;
         player.move_started = lastEpoch();//TODO:??
@@ -1359,7 +1359,7 @@ class ALClient{
                     obj = cast(Object*)new IntegerObject(value.get!int);
                     break;
                 case "double":
-                    obj = cast(Object*)new DoubleObject(value.get!float());
+                    obj = cast(Object*)new DoubleObject(value.get!double());
                     break;
                 case "string":
                     obj = cast(Object*)new StringObject(value.str());

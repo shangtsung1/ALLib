@@ -90,6 +90,12 @@ class Pathfinder {
     double gridResolution = 10.0;
 
     this(ALClient client, string fromMap, double x, double y, string toMap, double tx, double ty) {
+        if(fromMap == "jail"){
+            client.leaveJail();
+            fromMap = "main";
+            x = 2;
+            y = 45;
+        }
         this.client = client;
         this.fromMap = fromMap;
         this.x = x;
@@ -98,12 +104,6 @@ class Pathfinder {
         this.tx = tx;
         this.ty = ty;
         this.G = ALSession.INSTANCE().G;
-        if(fromMap == "jail"){
-            client.leaveJail();
-            fromMap = "main";
-            x = 2;
-            y = 45;
-        }
     }
 
     PathSegment[] findPath() {

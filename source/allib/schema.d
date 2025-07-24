@@ -238,7 +238,7 @@ struct Entity {
         e.going_y = getDouble(json,"going_y",e.y);
         e.abs = getBool(json,"abs",false);
         e.move_num = getInt(json,"move_num",0);
-        e.angle = getDouble(json,"angle",e.y);
+        e.angle = getDouble(json,"angle",0);
         e.cid = getInt(json,"cid",0);
         e.m = getInt(json,"m",0);
         e.controller = getString(json,"controller",null);
