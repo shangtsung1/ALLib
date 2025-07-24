@@ -546,7 +546,7 @@ class ALClient{
         double fraction = (entity.speed * elapsedTime) / totalDistance;
 
         fraction = min(fraction, 1.0);
-        entity.x = (lerp(entity.from_x, entity.going_y, fraction));
+        entity.x = (lerp(entity.from_x, entity.going_x, fraction));
         entity.y = (lerp(entity.from_y, entity.going_y, fraction));
 
         if (fraction >= 1.0) {
