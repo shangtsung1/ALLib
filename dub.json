@@ -2,14 +2,7 @@
 	"authors": [
 		"Jordan"
 	],
-	"copyright": "Copyright © 2025, Jordan",
-	"dependencies": {
-		"vibe-d": "~>0.10.2"
-	},
-	"description": "A minimal D application.",
-	"license": "ISC",
-	"name": "ald2",
-		"configurations": [
+	"configurations": [
 		{
 			"mainSourceFile": "source/app.d",
 			"name": "application",
@@ -21,5 +14,13 @@
 			"targetName": "allib",
 			"targetType": "dynamicLibrary"
 		}
-	]
+	],
+	"copyright": "Copyright © 2025, Jordan",
+	"dependencies": {
+		"derelict-sdl2": "~>2.1.4",
+		"vibe-d": "~>0.10.2"
+	},
+	"description": "A minimal D application.",
+	"license": "ISC",
+	"name": "ald2"
 }

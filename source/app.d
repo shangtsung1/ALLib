@@ -1,16 +1,29 @@
 import std.stdio;
-import allib;
-import allib.logger;
-
 import std.datetime;
 
+import core.thread;
+
 import vibe.vibe : runApplication,runTask;
+import allib;
+
+
 
 void main()
 {
 	ALSession session = ALSession.INSTANCE();
 	ALClient frumpyBrute = session.createClient("FrumpyBrute");
-	auto frumpyBruteTaskHandle = runTask(() => initClient(frumpyBrute));
+	new Thread(() => initClient(frumpyBrute)).start();
+	//new ALViewer(frumpyBrute,400,300).start();
+
+
+	ALClient frumpyRanger = session.createClient("FrumpyRanger");
+	new Thread(() => initClient(frumpyRanger)).start();
+	//new ALViewer(frumpyRanger,400,300).start();
+
+	ALClient frumpyHealer = session.createClient("FrumpyHealer");
+	new Thread(() => initClient(frumpyHealer)).start();
+	//new ALViewer(frumpyHealer,400,300).start();
+
 	runApplication();
 }
 
@@ -54,10 +67,10 @@ Duration killGoo(ALClient client){
         return 1000.msecs;
     }
 
-    if (client.player.hp < client.player.max_hp / 2){
+    if (client.player.hp < client.player.max_hp / 2 && client.canUse("hp")){
         client.useHp();
     }
-    if (client.player.mp < client.player.max_mp / 2){
+    if (client.player.mp < client.player.max_mp / 2 && client.canUse("mp")){
         client.useMp();
     }
     
@@ -68,17 +81,19 @@ Duration killGoo(ALClient client){
 	if(target.id !is null){
         logInfo(client.player.id," attacking: ", target.id);
         if(client.canUse("attack")){
-			if (distance(client.player, target) > client.player.range / 2) {
+			if (distance(client.player, target) > client.player.range) {
 				logInfo(client.player.id," moving towards target...");
 				if (!client.player.moving) {
 					//client.smartMove(client.player.mapName,target.x, target.y);
 					client.move(target.x, target.y);
 				}
 			}
-            if(client.player.target != target.id){
-                client.changeTarget(target.id, target.id);
-            }
-            client.attack(target.id);
+			else{
+				if(client.player.target != target.id){
+					client.changeTarget(target.id, target.id);
+				}
+				client.attack(target.id);
+			}
         }
 	}
 	else{

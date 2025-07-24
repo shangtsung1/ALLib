@@ -38,7 +38,7 @@ shared static this() {
 class ALSession{
     public:
         static shared GameData gameData;
-        static JSONValue G;
+        __gshared JSONValue G;
     private:
         static shared string token;
         static shared ALSession instance;
@@ -156,6 +156,7 @@ class ALClient{
     }
 
     void start(Duration delegate(ALClient) script){
+        fireInit();
         while(running){
             auto url = URL(protocol~"://" ~ serverInfo["addr"].get!string ~ ":" ~ serverInfo["port"].get!int.to!string ~ "/socket.io/?EIO=4&transport=websocket");
             HTTPClientSettings settings = new HTTPClientSettings;
@@ -192,6 +193,9 @@ class ALClient{
                 }
                 if (lastEpoch() - lastUpdate >= 50) {
                     lastUpdate = lastEpoch();
+                    if (!player.rip) {
+                        lerpEntity(player);
+                    }
                     pathwalker.update();
                 }
                 if (now >= nextScriptTime)
@@ -199,6 +203,7 @@ class ALClient{
                     auto waitDuration = script(this);
                     nextScriptTime = lastEpoch() + waitDuration.total!"msecs";
                 }
+                fireUpdateLoop();
             }
             logError("Disconnected, waiting ",failTime," seconds");
             Thread.sleep(failTime.msecs);                
@@ -293,6 +298,9 @@ class ALClient{
             logError("Error parsing event: ", e.msg, payload, e);
         }
     }
+    mixin ListenerSet!("Init");
+    mixin ListenerSet!("UpdateLoop");
+
 
     mixin ListenerSet!("Invite", string);
     mixin ListenerSet!("UI", JSONValue);
@@ -510,6 +518,39 @@ class ALClient{
             logError(e);
             import core.stdc.stdlib;
             exit(1);
+        }
+    }
+
+        double lerp(double a, double b, double t) {
+        return a + (b - a) * t;
+    }
+
+    void lerpEntity(Entity entity) {
+        if(!entity.moving){
+            return;
+        }
+        long currentTime = lastEpoch();
+
+        double elapsedTime = (currentTime - entity.move_started) / 1000.0;
+
+        double totalDistance = distance(entity.from_x, entity.from_y, entity.going_x, entity.going_y);
+
+        if (totalDistance == 0.0) {
+            // Snap to destination
+            entity.x=entity.going_x;
+            entity.y=entity.going_y;
+            entity.moving = false;
+            return;
+        }
+
+        double fraction = (entity.speed * elapsedTime) / totalDistance;
+
+        fraction = min(fraction, 1.0);
+        entity.x = (lerp(entity.from_x, entity.going_y, fraction));
+        entity.y = (lerp(entity.from_y, entity.going_y, fraction));
+
+        if (fraction >= 1.0) {
+            entity.moving = false;
         }
     }
 

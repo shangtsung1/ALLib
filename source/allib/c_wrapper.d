@@ -8,6 +8,8 @@ import std.json;
 import std.datetime;
 import std.string;
 
+import vibe.vibe : runApplication,runTask;
+
 // Opaque handles for C
 extern(C) struct ALSessionHandle;
 extern(C) struct ALClientHandle;
@@ -27,6 +29,11 @@ extern(C) ALSessionHandle* allib_create_session(const char* addr)
         fprintf(stderr, "Error creating session: %.*s\n", cast(int)e.msg.length, e.msg.ptr);
         return null;
     }
+}
+
+//blocking. need it for the app to run tho. start chars in new thread.
+extern(C) void runApp(){
+    runApplication();
 }
 
 // Client functions
