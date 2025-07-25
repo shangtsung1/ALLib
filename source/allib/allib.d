@@ -170,16 +170,17 @@ class ALClient{
             settings.readTimeout = 14.days;
             settings.connectTimeout = 14.days;
             settings.defaultKeepAliveTimeout = 5.seconds;
+            settings.webSocketPayloadMaxLength = 100_000_000_000;
             try {
                 socket = connectWebSocket(url,settings);
                 logInfo("Waiting for connection...");
-                while (!socket.connected && socket.closeCode() == 0) {
+                while (!socket.connected) {
                     Thread.sleep(5.msecs);
                 }
                 logInfo("Connected!");
             } catch (Throwable t) {
-                logError(t.msg, t," codes=",socket.closeCode," ",socket.closeReason);
-                socket.close();
+                logError(t.msg, t);
+                if(socket !is null)socket.close();
                 return;
             }
             long lastPing = lastEpoch();
@@ -222,7 +223,7 @@ class ALClient{
                     logError(t, t.msg);
                     failed = true;
                     resetClient();
-                    try socket.close(); catch(Throwable) {}
+                    try if(socket !is null) socket.close(); catch(Throwable) {}
                     socket = null;
                     break; // break inner loop to reconnect
                 }
@@ -362,12 +363,14 @@ class ALClient{
                     if(msgs[0]== "Failed: ingame"){
                         resetClient();
                     }
-                    auto m = match(msgs[0], `Failed: wait_(\d+)_seconds`);
-                    if (m.hit) {
-                        int seconds = to!int(m.captures[1]);
-                        failTime = 1000*seconds;
-                        failed = true;
-                        resetClient();
+                    else if(msgs.startsWith("Failed: wait")){
+                        auto m = match(msgs[0], `Failed: wait_(\d+)_seconds`);
+                        if (m.hit) {
+                            int seconds = to!int(m.captures[1]);
+                            failTime = 1000*seconds;
+                            failed = true;
+                            resetClient();
+                        }
                     }
                     return;
                 case "disconnect_reason":
@@ -841,11 +844,13 @@ class ALClient{
         double closestDist = double.max;
 
         foreach (e; players.byValue) {
-            if (predicate(cast(Entity)e)) {
-                double dist = distance(player.x, player.y, e.x, e.y);
+            auto ent = cast(Entity)e;
+            if (ent.id == player.id) continue;
+            if (predicate(ent)) {
+                double dist = distance(player.x, player.y, ent.x, ent.y);
                 if (dist < closestDist) {
                     closestDist = dist;
-                    closest = cast(Entity)e;
+                    closest = ent;
                 }
             }
         }
@@ -986,7 +991,94 @@ class ALClient{
         return useSkill(name, Nullable!Entity.init, null);
     }
 
+    bool isAlive() { return !player.rip; }
 
+    bool isDead() { return player.rip; }
+
+    bool isMoving() { return player.moving; }
+
+    bool hasTarget() { return player.target !is null && player.target.length > 0; }
+
+    Entity getTargetEntity() {
+        if (!hasTarget()) return Entity.init;
+        string id = player.target;
+        if (id in monsters) return monsters[id];
+        if (id in players) return players[id];
+        return Entity.init;
+    }
+
+    bool isTargetAlive() {
+        auto t = getTargetEntity();
+        return t.id !is null && !t.rip;
+    }
+
+    double distanceTo(double x, double y) {
+        return distance(player.x, player.y, x, y);
+    }
+
+    double distanceToEntity(Entity e) {
+        return distance(player.x, player.y, e.x, e.y);
+    }
+
+    double distanceToClient(ALClient c) {
+        return distance(player.x, player.y, c.player.x, c.player.y);
+    }
+
+    bool isWithinRange(double x, double y, double range) {
+        return distanceTo(x, y) <= range;
+    }
+
+    bool isWithinRangeOfEntity(Entity e, double range) {
+        return distanceToEntity(e) <= range;
+    }
+
+    void moveToEntity(Entity e) { move(e.x, e.y); }
+
+    void moveToClient(ALClient c) { moveToEntity(c.player); }
+
+    bool canAttackEntity(Entity e) {
+        return canUse("attack") && isWithinRangeOfEntity(e, player.range);
+    }
+
+    long skillCooldownRemaining(string name) {
+        if (name in nextSkill) {
+            long remain = nextSkill[name] - lastEpoch();
+            return remain > 0 ? remain : 0;
+        }
+        return 0;
+    }
+
+    bool isSkillReady(string name) { return skillCooldownRemaining(name) == 0; }
+
+    bool isHealthLow(double ratio = 0.5) {
+        return player.hp < cast(int)(player.max_hp * ratio);
+    }
+
+    bool isManaLow(double ratio = 0.5) {
+        return player.mp < cast(int)(player.max_mp * ratio);
+    }
+
+    void useHpIfLow(double ratio = 0.5) {
+        if (isHealthLow(ratio) && canUse("hp")) useHp();
+    }
+
+    void useMpIfLow(double ratio = 0.5) {
+        if (isManaLow(ratio) && canUse("mp")) useMp();
+    }
+
+    void travelToTown() { smartMove("town"); }
+
+    bool isOnMap(string name) { return player.mapName == name; }
+
+    void stopMovement() { move(player.x, player.y); }
+
+    void followEntity(Entity e, double dist = 20.0) {
+        if (distanceToEntity(e) > dist) moveTowards(e, 1.0);
+    }
+
+    void followClient(ALClient c, double dist = 20.0) {
+        followEntity(c.player, dist);
+    }
 
     bool attack(string id) {
         emit("attack", json(["id": JSONValue(id)]));
@@ -1367,8 +1459,10 @@ class ALClient{
     }
     void loadAttachments(string filename) {
         static import std.file;
+        if(!std.file.exists(filename)) return;
         string data = std.file.readText(filename);
         JSONValue json = parseJSON(data);
+        if(json.type != JSONType.array) return;
 
         foreach (entry; json.array()) {
             string key = entry["key"].get!string;

@@ -150,6 +150,33 @@ double allib_get_double(ALClientHandle* client_ptr, const char* key);
 void allib_set_string(ALClientHandle* client_ptr, const char* key, const char* value);
 char* allib_get_string(ALClientHandle* client_ptr, const char* key);
 
+//helper
+int allib_is_alive(ALClientHandle* client_ptr);
+int allib_is_dead(ALClientHandle* client_ptr);
+int allib_is_moving(ALClientHandle* client_ptr);
+int allib_has_target(ALClientHandle* client_ptr);
+ALEntity allib_get_target_entity(ALClientHandle* client_ptr);
+int allib_is_target_alive(ALClientHandle* client_ptr);
+double allib_distance_to(ALClientHandle* client_ptr, double x, double y);
+double allib_distance_to_entity(ALClientHandle* client_ptr, ALEntity ent);
+double allib_distance_to_client(ALClientHandle* client_ptr, ALClientHandle* other);
+int allib_is_within_range(ALClientHandle* client_ptr, double x, double y, double range);
+int allib_is_within_range_of_entity(ALClientHandle* client_ptr, ALEntity ent, double range);
+void allib_move_to_entity(ALClientHandle* client_ptr, ALEntity ent);
+void allib_move_to_client(ALClientHandle* client_ptr, ALClientHandle* other);
+int allib_can_attack_entity(ALClientHandle* client_ptr, ALEntity ent);
+long allib_skill_cooldown_remaining(ALClientHandle* client_ptr, const char* name);
+int allib_is_skill_ready(ALClientHandle* client_ptr, const char* name);
+int allib_is_health_low(ALClientHandle* client_ptr, double ratio);
+int allib_is_mana_low(ALClientHandle* client_ptr, double ratio);
+void allib_use_hp_if_low(ALClientHandle* client_ptr, double ratio);
+void allib_use_mp_if_low(ALClientHandle* client_ptr, double ratio);
+void allib_travel_to_town(ALClientHandle* client_ptr);
+int allib_is_on_map(ALClientHandle* client_ptr, const char* name);
+void allib_stop_movement(ALClientHandle* client_ptr);
+void allib_follow_entity(ALClientHandle* client_ptr, ALEntity ent, double dist);
+void allib_follow_client(ALClientHandle* client_ptr, ALClientHandle* other, double dist);
+
 // Attachment IO
 void allib_save_attachments(ALClientHandle* client_ptr, const char* path);
 void allib_load_attachments(ALClientHandle* client_ptr, const char* path);

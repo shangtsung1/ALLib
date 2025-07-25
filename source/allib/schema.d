@@ -151,6 +151,13 @@ struct SlotItem {
     Nullable!(string[]) ps;
 }
 
+struct Item{
+    string name;
+    int level;
+    int q;
+    bool valid;
+}
+
 struct Entity {
     int hp;
     int max_hp;
@@ -193,11 +200,13 @@ struct Entity {
     int cid;
     string controller;
     string skin;
+    string stand;
 
     int m;
     //cx
 
     Slots slots;
+    Item[] inventory;
     string ctype;
     string mtype;
     string type;
@@ -243,6 +252,30 @@ struct Entity {
         e.m = getInt(json,"m",0);
         e.controller = getString(json,"controller",null);
         e.skin = getString(json,"skin",null);
+        e.stand = getString(json,"stand",null);
+
+        if("items" in json){
+            for(int i = 0; i < json["items"].array.length;i++){
+                if(json["items"].array[i].isNull()){
+                    e.inventory[i] = Item();
+                    e.inventory[i].valid = false;
+                }
+                else{
+                    e.inventory[i] = Item();
+                    e.inventory[i].valid = true;
+                    JSONValue jv = json["items"].array[i];
+                    if("name" in jv){
+                        e.inventory[i].name = jv["name"].get!string;
+                    }
+                    if("q" in jv){
+                        e.inventory[i].q = jv["q"].get!int;
+                    }
+                    if("level" in jv){
+                        e.inventory[i].level = jv["level"].get!int;
+                    }
+                }
+            }
+        }
 
         auto parseSlot(ref SlotItem slot, JSONValue slotJson) {
             if(slotJson.isNull())return;

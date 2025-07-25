@@ -82,8 +82,7 @@ struct ALChest {
     const char* id;
 };
 
-ALEntity allib_get_entity(ALClientHandle* client_ptr) {
-    auto e = (cast(ALClient)(cast(void*)client_ptr)).player;
+private ALEntity toALEntity(allib.schema.Entity e) {
     ALEntity outs;
     outs.hp = e.hp;
     outs.max_hp = e.max_hp;
@@ -143,6 +142,125 @@ ALEntity allib_get_entity(ALClientHandle* client_ptr) {
     copySlot(outs.slots.cape, s.cape);
 
     return outs;
+}
+
+ALEntity allib_get_entity(ALClientHandle* client_ptr) {
+    auto e = (cast(ALClient)(cast(void*)client_ptr)).player;
+    return toALEntity(e);
+}
+
+extern(C) bool allib_is_alive(ALClientHandle* client_ptr) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isAlive();
+}
+
+extern(C) bool allib_is_dead(ALClientHandle* client_ptr) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isDead();
+}
+
+extern(C) bool allib_is_moving(ALClientHandle* client_ptr) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isMoving();
+}
+
+extern(C) bool allib_has_target(ALClientHandle* client_ptr) {
+    return (cast(ALClient)(cast(void*)client_ptr)).hasTarget();
+}
+
+extern(C) ALEntity allib_get_target_entity(ALClientHandle* client_ptr) {
+    auto ent = (cast(ALClient)(cast(void*)client_ptr)).getTargetEntity();
+    return toALEntity(ent);
+}
+
+extern(C) bool allib_is_target_alive(ALClientHandle* client_ptr) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isTargetAlive();
+}
+
+extern(C) double allib_distance_to(ALClientHandle* client_ptr, double x, double y) {
+    auto c = cast(ALClient)(cast(void*)client_ptr);
+    return distance(c.player.x, c.player.y, x, y);
+}
+
+extern(C) double allib_distance_to_entity(ALClientHandle* client_ptr, ALEntity ent) {
+    auto c = cast(ALClient)(cast(void*)client_ptr);
+    return distance(c.player.x, c.player.y, ent.x, ent.y);
+}
+
+extern(C) double allib_distance_to_client(ALClientHandle* client_ptr, ALClientHandle* other_ptr) {
+    auto c1 = cast(ALClient)(cast(void*)client_ptr);
+    auto c2 = cast(ALClient)(cast(void*)other_ptr);
+    return distance(c1.player.x, c1.player.y, c2.player.x, c2.player.y);
+}
+
+extern(C) bool allib_is_within_range(ALClientHandle* client_ptr, double x, double y, double range) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isWithinRange(x, y, range);
+}
+
+extern(C) bool allib_is_within_range_of_entity(ALClientHandle* client_ptr, ALEntity ent, double range) {
+    auto c = cast(ALClient)(cast(void*)client_ptr);
+    return c.isWithinRange(ent.x, ent.y, range);
+}
+
+extern(C) void allib_move_to_entity(ALClientHandle* client_ptr, ALEntity ent) {
+    (cast(ALClient)(cast(void*)client_ptr)).move(ent.x, ent.y);
+}
+
+extern(C) void allib_move_to_client(ALClientHandle* client_ptr, ALClientHandle* other_ptr) {
+    auto other = cast(ALClient)(cast(void*)other_ptr);
+    (cast(ALClient)(cast(void*)client_ptr)).move(other.player.x, other.player.y);
+}
+
+extern(C) bool allib_can_attack_entity(ALClientHandle* client_ptr, ALEntity ent) {
+    allib.schema.Entity e;
+    e.x = ent.x;
+    e.y = ent.y;
+    return (cast(ALClient)(cast(void*)client_ptr)).canAttackEntity(e);
+}
+
+extern(C) long allib_skill_cooldown_remaining(ALClientHandle* client_ptr, const char* name) {
+    return (cast(ALClient)(cast(void*)client_ptr)).skillCooldownRemaining((name).to!string);
+}
+
+extern(C) bool allib_is_skill_ready(ALClientHandle* client_ptr, const char* name) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isSkillReady((name).to!string);
+}
+
+extern(C) bool allib_is_health_low(ALClientHandle* client_ptr, double ratio) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isHealthLow(ratio);
+}
+
+extern(C) bool allib_is_mana_low(ALClientHandle* client_ptr, double ratio) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isManaLow(ratio);
+}
+
+extern(C) void allib_use_hp_if_low(ALClientHandle* client_ptr, double ratio) {
+    (cast(ALClient)(cast(void*)client_ptr)).useHpIfLow(ratio);
+}
+
+extern(C) void allib_use_mp_if_low(ALClientHandle* client_ptr, double ratio) {
+    (cast(ALClient)(cast(void*)client_ptr)).useMpIfLow(ratio);
+}
+
+extern(C) void allib_travel_to_town(ALClientHandle* client_ptr) {
+    (cast(ALClient)(cast(void*)client_ptr)).travelToTown();
+}
+
+extern(C) bool allib_is_on_map(ALClientHandle* client_ptr, const char* name) {
+    return (cast(ALClient)(cast(void*)client_ptr)).isOnMap((name).to!string);
+}
+
+extern(C) void allib_stop_movement(ALClientHandle* client_ptr) {
+    (cast(ALClient)(cast(void*)client_ptr)).stopMovement();
+}
+
+extern(C) void allib_follow_entity(ALClientHandle* client_ptr, ALEntity ent, double dist) {
+    allib.schema.Entity e;
+    e.x = ent.x;
+    e.y = ent.y;
+    (cast(ALClient)(cast(void*)client_ptr)).followEntity(e, dist);
+}
+
+extern(C) void allib_follow_client(ALClientHandle* client_ptr, ALClientHandle* other_ptr, double dist) {
+    auto other = cast(ALClient)(cast(void*)other_ptr);
+    (cast(ALClient)(cast(void*)client_ptr)).followClient(other, dist);
 }
 
 extern(C) ALSessionHandle* allib_create_session(const char* addr) {
