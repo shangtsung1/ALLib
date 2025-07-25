@@ -155,6 +155,13 @@ class ALClient{
         pathwalker = new Pathwalker(this);
     }
 
+    public void resetClient(){
+        awaitingAuth = true;
+        monsters = typeof(monsters).init;
+        players = typeof(players).init;
+        pathwalker = new Pathwalker(this);
+    }
+
     void start(Duration delegate(ALClient) script){
         fireInit();
         while(running){
@@ -173,37 +180,52 @@ class ALClient{
             } catch (Throwable t) {
                 logError(t.msg, t," codes=",socket.closeCode," ",socket.closeReason);
                 socket.close();
+                return;
             }
             long lastPing = lastEpoch();
             long lastUpdate = lastEpoch();
             long nextScriptTime = lastEpoch();
-            while(socket.connected && running && !failed){
-                while(socket.dataAvailableForRead()) {
-                    auto message = socket.receiveText();
-                    processEngineIOMessage(message);
-                }
-                if (awaitingAuth) {
-                    Thread.sleep(1.msecs);
-                    continue;
-                }
-                long now = lastEpoch();
-                if (lastEpoch() - lastPing >= 3000) {
-                    lastPing = lastEpoch();
-                    ping();
-                }
-                if (lastEpoch() - lastUpdate >= 50) {
-                    lastUpdate = lastEpoch();
-                    if (!player.rip) {
-                        lerpEntity(player);
+            while (socket.connected && running && !failed) {
+                try {
+                    while (socket.dataAvailableForRead()) {
+                        auto message = socket.receiveText();
+                        processEngineIOMessage(message);
                     }
-                    pathwalker.update();
+
+                    if (awaitingAuth) {
+                        Thread.sleep(1.msecs);
+                        continue;
+                    }
+
+                    long now = lastEpoch();
+                    if (now - lastPing >= 3000) {
+                        lastPing = now;
+                        ping();
+                    }
+
+                    if (now - lastUpdate >= 50) {
+                        lastUpdate = now;
+                        if (!player.rip) {
+                            lerpEntity(player);
+                        }
+                        pathwalker.update();
+                    }
+
+                    if (now >= nextScriptTime) {
+                        auto waitDuration = script(this);
+                        nextScriptTime = lastEpoch() + waitDuration.total!"msecs";
+                    }
+
+                    fireUpdateLoop();
+
+                } catch (Throwable t) {
+                    logError(t, t.msg);
+                    failed = true;
+                    resetClient();
+                    try socket.close(); catch(Throwable) {}
+                    socket = null;
+                    break; // break inner loop to reconnect
                 }
-                if (now >= nextScriptTime)
-                {
-                    auto waitDuration = script(this);
-                    nextScriptTime = lastEpoch() + waitDuration.total!"msecs";
-                }
-                fireUpdateLoop();
             }
             logError("Disconnected, waiting ",failTime," seconds");
             Thread.sleep(failTime.msecs);                
@@ -226,7 +248,7 @@ class ALClient{
                 break;
             case '1':
                 logWarn("Server closed the connection");
-                socket.close();
+                resetClient();
                 break;
             case '2':
                 logDebug("Pong!",message);
@@ -266,7 +288,7 @@ class ALClient{
                 break;
             case '1':
                 logInfo("Socket.IO: Disconnect packet", message);
-                socket.close();
+                resetClient();
                 break;
             case '2':
                 handleEvent(message[1..$]);
@@ -338,18 +360,18 @@ class ALClient{
                 case "game_error":
                     logError("GameError: "~msgs[0]);
                     if(msgs[0]== "Failed: ingame"){
-                        socket.close();
+                        resetClient();
                     }
                     auto m = match(msgs[0], `Failed: wait_(\d+)_seconds`);
                     if (m.hit) {
                         int seconds = to!int(m.captures[1]);
                         failTime = 1000*seconds;
                         failed = true;
-                        socket.close();
+                        resetClient();
                     }
                     return;
                 case "disconnect_reason":
-                    socket.close();
+                    resetClient();
                     return;
                 case "code_eval":
                     logInfo("eval",msgs[0]);
@@ -381,8 +403,8 @@ class ALClient{
                     monsters = typeof(monsters).init;
                     players = typeof(players).init;
                     parseEntities(msg,true);
-                    //if(player !is null)
-                    //    pathwalker.onMapChanged(player.mapName, player.x,player.y);
+                    if(player.id !is null)
+                        pathwalker.onMapChanged(player.mapName, player.x,player.y);
                     fireNewMap(msg);
                     break;
                 case "ping_trig":
@@ -406,14 +428,17 @@ class ALClient{
                 break;
                 case "notthere":
                 case "disappear":
-                    if("id" in msg && msg["id"].get!string in monsters){
-                        monsters[msg["id"].get!string].rip=true;
-                    }
-                    else if("id" in msg && msg["id"].get!string in players){
-                        players[msg["id"].get!string].rip=true;
-                    }
-                    if(msg["id"].get!string == player.id){
-                        player.rip=true;
+                    if("id" in msg){
+                        auto id = msg["id"].get!string;
+                        if(id in monsters){
+                            monsters.remove(id);
+                        }
+                        else if(id in players){
+                            players.remove(id);
+                        }
+                        if(id == player.id){
+                            player.rip=true;
+                        }
                     }
                     fireDisappear(msg);
                 break;
@@ -517,7 +542,8 @@ class ALClient{
         catch(Throwable e){
             logError(e);
             import core.stdc.stdlib;
-            exit(1);
+            //exit(1);
+            resetClient();
         }
     }
 
