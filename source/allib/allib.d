@@ -170,7 +170,7 @@ class ALClient{
             settings.readTimeout = 14.days;
             settings.connectTimeout = 14.days;
             settings.defaultKeepAliveTimeout = 5.seconds;
-            settings.webSocketPayloadMaxLength = 100_000_000_000;
+            settings.webSocketPayloadMaxLength = 100_000_000;
             try {
                 socket = connectWebSocket(url,settings);
                 logInfo("Waiting for connection...");

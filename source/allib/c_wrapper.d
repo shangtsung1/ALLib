@@ -263,7 +263,7 @@ extern(C) void allib_follow_client(ALClientHandle* client_ptr, ALClientHandle* o
     (cast(ALClient)(cast(void*)client_ptr)).followClient(other, dist);
 }
 
-extern(C) ALSessionHandle* allib_create_session(const char* addr) {
+extern(C) ALSessionHandle* allib_create_session() {
     try {
         auto session = ALSession.INSTANCE();
         return cast(ALSessionHandle*)cast(void*)session;
@@ -288,7 +288,7 @@ extern(C) ALClientHandle* allib_create_client(ALSessionHandle* session_ptr, cons
 }
 
 extern(C) void allib_free_client(ALClientHandle* client_ptr) {}
-extern(C) void allib_start_client(ALClientHandle* client_ptr, ScriptCallback script_cb, EventCallback event_cb) {
+extern(C) void allib_start_client(ALClientHandle* client_ptr, ScriptCallback script_cb) {
     auto client = cast(ALClient)(cast(void*)client_ptr);
     client.start((ALClient c) => dur!"msecs"(script_cb(client_ptr)));
 }

@@ -255,6 +255,7 @@ struct Entity {
         e.stand = getString(json,"stand",null);
 
         if("items" in json){
+            e.inventory.length = json["items"].array.length;
             for(int i = 0; i < json["items"].array.length;i++){
                 if(json["items"].array[i].isNull()){
                     e.inventory[i] = Item();

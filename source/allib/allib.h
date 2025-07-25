@@ -75,7 +75,7 @@ typedef struct {
 } ALChest;
 
 // Session
-ALSessionHandle* allib_create_session(const char* addr);
+ALSessionHandle* allib_create_session();
 void allib_free_session(ALSessionHandle* session_ptr);
 void allib_run_app(void);
 
