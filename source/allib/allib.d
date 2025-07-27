@@ -117,6 +117,54 @@ class ALSession{
         }
         return new ALClient(this,getServer(server), getCharacter(charName),"wss");
     }
+
+    bool hasCharacter(string name) {
+        foreach(ch; characters) if(ch["name"].get!string == name) return true;
+        return false;
+    }
+
+    bool hasServer(string key) {
+        foreach(s; servers) if(s["key"].get!string == key) return true;
+        return false;
+    }
+
+    size_t characterCount() { return characters.length; }
+
+    size_t serverCount() { return servers.length; }
+
+    string[] getCharacterNames() {
+        string[] names; foreach(ch; characters) names ~= ch["name"].get!string;
+        return names;
+    }
+
+    string[] getServerKeys() {
+        string[] keys; foreach(s; servers) keys ~= s["key"].get!string; return keys;
+    }
+
+    public string getAddress(){
+        return allib.httpwrapper.ADDR;
+    }
+    /// Return the first character entry if present
+    public JSONValue getFirstCharacter(){
+        foreach(_, val; characters){
+            return val;
+        }
+        return JSONValue();
+    }
+
+    /// Return the first server entry if present
+    public JSONValue getFirstServer(){
+        foreach(_, val; servers){
+            return val;
+        }
+        return JSONValue();
+    }
+
+    /// Refresh server and character data from the API
+    public void refreshServersAndCharacters(){
+        allib.httpwrapper.updateServersAndCharacters();
+    }
+
 }
 
 class ALClient{
@@ -1579,6 +1627,140 @@ class ALClient{
             .map!(p => cast(Entity)p)
             .array;
     }
+
+    string[] getAttachmentKeys() { return attachments.keys.array; }
+
+    void removeAttachment(string key) { attachments.remove(key); }
+
+    int chestCount() { return cast(int)chests.length; }
+
+    bool isPartyMember(string name) { return party.canFind(name); }
+
+    string[] listMonsterIds() { return monsters.keys.array; }
+
+    string[] listPlayerIds() { return players.keys.array; }
+
+    int totalEntities() { return cast(int)(monsters.length + players.length); }
+
+    long getSkillCooldownEnd(string name) { return name in nextSkill ? nextSkill[name] : 0; }
+
+    void setSkillCooldownEnd(string name, long ts) { nextSkill[name] = ts; }
+    string getPlayerName() { return player.id; }
+
+    string getCharacterClass() { return player.ctype; }
+
+    int getCharacterLevel() { return player.level; }
+
+    string getMapName() { return player.mapName; }
+
+    bool isStandingStill() { return !player.moving; }
+
+    bool isNearEntity(Entity e, double range) { return distanceToEntity(e) <= range; }
+
+    bool isNearClient(ALClient c, double range) { return distanceToClient(c) <= range; }
+
+    bool isNearPoint(double x, double y, double range) { return distanceTo(x, y) <= range; }
+
+    double distanceToTarget() { return hasTarget() ? distanceToEntity(getTargetEntity()) : double.nan; }
+
+    bool isTargetInRange(double range = double.nan) {
+        if(!hasTarget()) return false;
+        auto r = range.isNaN ? player.range : range;
+        return distanceToEntity(getTargetEntity()) <= r;
+    }
+
+    bool isSkillOnCooldown(string name) { return isOnCooldown(name); }
+
+    bool canUseHp() { return canUse("hp"); }
+
+    bool canUseMp() { return canUse("mp"); }
+
+    bool canUseAttack() { return canUse("attack"); }
+
+    void useHpIfBelow(int amount) { if(player.hp < amount && canUse("hp")) useHp(); }
+
+    void useMpIfBelow(int amount) { if(player.mp < amount && canUse("mp")) useMp(); }
+
+    bool isInventorySlotEmpty(int slot) {
+        return slot < 0 || slot >= player.inventory.length || !player.inventory[slot].valid;
+    }
+
+    string getItemNameAtSlot(int slot) {
+        return !isInventorySlotEmpty(slot) ? player.inventory[slot].name : null;
+    }
+
+        bool hasMainhand(){ return player.slots.mainhand.name.length>0; }
+    bool hasOffhand(){ return player.slots.offhand.name.length>0; }
+    bool hasHelmet(){ return player.slots.helmet.name.length>0; }
+    bool hasChestArmor(){ return player.slots.chest.name.length>0; }
+    bool hasGloves(){ return player.slots.gloves.name.length>0; }
+    bool hasShoes(){ return player.slots.shoes.name.length>0; }
+    bool hasBelt(){ return player.slots.belt.name.length>0; }
+    bool hasAmulet(){ return player.slots.amulet.name.length>0; }
+    bool hasRing1(){ return player.slots.ring1.name.length>0; }
+    bool hasRing2(){ return player.slots.ring2.name.length>0; }
+
+    string getRing1Name() { return player.slots.ring1.name; }
+    string getRing2Name() { return player.slots.ring2.name; }
+    string getEarring1Name() { return player.slots.earring1.name; }
+    string getEarring2Name() { return player.slots.earring2.name; }
+    string getBeltName() { return player.slots.belt.name; }
+    string getMainhandName() { return player.slots.mainhand.name; }
+    string getOffhandName() { return player.slots.offhand.name; }
+    string getHelmetName() { return player.slots.helmet.name; }
+    string getChestSlotName() { return player.slots.chest.name; }
+    string getPantsName() { return player.slots.pants.name; }
+    string getShoesName() { return player.slots.shoes.name; }
+    string getGlovesName() { return player.slots.gloves.name; }
+    string getAmuletName() { return player.slots.amulet.name; }
+    string getOrbName() { return player.slots.orb.name; }
+    string getElixirName() { return player.slots.elixir.name; }
+    string getCapeName() { return player.slots.cape.name; }
+
+    Entity getEntityById(string id) {
+        if(id in players) return players[id];
+        if(id in monsters) return monsters[id];
+        return Entity.init;
+    }
+
+    int hp() { return player.hp; }
+    int maxHp() { return player.max_hp; }
+    int mp() { return player.mp; }
+    int maxMp() { return player.max_mp; }
+    long xp() { return player.xp; }
+    int attackPower() { return player.attack; }
+    int healPower() { return player.heal; }
+    double frequencyStat() { return player.frequency; }
+    int movementSpeed() { return player.speed; }
+    int attackRange() { return player.range; }
+    int armorRating() { return player.armor; }
+    int resistanceRating() { return player.resistance; }
+    int levelNumber() { return player.level; }
+    string partyLeaderName() { return player.party; }
+    bool isAfk() { return player.afk; }
+    string currentTarget() { return player.target; }
+    bool hasFocusTarget() { return !player.focus.isNull; }
+    string focusTarget() { return player.focus.isNull ? null : player.focus.get; }
+    int ageValue() { return player.age; }
+    double pdpsValue() { return player.pdps; }
+    string characterId() { return player.id; }
+    double currentX() { return player.x; }
+    double currentY() { return player.y; }
+    double destinationX() { return player.going_x; }
+    double destinationY() { return player.going_y; }
+    double fromX() { return player.from_x; }
+    double fromY() { return player.from_y; }
+    long moveStartTime() { return player.move_started; }
+    double movementAngle() { return player.angle; }
+    int charCid() { return player.cid; }
+    string controllerName() { return player.controller; }
+    string skinName() { return player.skin; }
+    string standName() { return player.stand; }
+    int mValue() { return player.m; }
+    string characterType() { return player.ctype; }
+    string monsterType() { return player.mtype; }
+    string entityType() { return player.type; }
+    string ownerName() { return player.owner; }
 
     void bankPacksInit(){
         bankPacks["items0"] = BankPack("bank", 0L, 0);
