@@ -156,6 +156,9 @@ class ALClient{
     }
 
     public void resetClient(){
+        try if(socket !is null) socket.close(); catch(Throwable) {}
+        socket = null;
+        running = true;
         awaitingAuth = true;
         monsters = typeof(monsters).init;
         players = typeof(players).init;
@@ -166,12 +169,16 @@ class ALClient{
         fireInit();
         while(running){
             auto url = URL(protocol~"://" ~ serverInfo["addr"].get!string ~ ":" ~ serverInfo["port"].get!int.to!string ~ "/socket.io/?EIO=4&transport=websocket");
+            if(sid !is null){
+                url =  URL(protocol~"://" ~ serverInfo["addr"].get!string ~ ":" ~ serverInfo["port"].get!int.to!string ~ "/socket.io/?EIO=4&transport=websocket&sid=" ~ sid);
+            }
             HTTPClientSettings settings = new HTTPClientSettings;
             settings.readTimeout = 14.days;
             settings.connectTimeout = 14.days;
             settings.defaultKeepAliveTimeout = 5.seconds;
             settings.webSocketPayloadMaxLength = 100_000_000;
             try {
+                failed = false;
                 socket = connectWebSocket(url,settings);
                 logInfo("Waiting for connection...");
                 while (!socket.connected) {
@@ -223,8 +230,6 @@ class ALClient{
                     logError(t, t.msg);
                     failed = true;
                     resetClient();
-                    try if(socket !is null) socket.close(); catch(Throwable) {}
-                    socket = null;
                     break; // break inner loop to reconnect
                 }
             }
@@ -285,6 +290,8 @@ class ALClient{
 
         switch (message[0]) {
             case '0':
+                auto json = parseJSON(message[1..$]);
+                sid = json["sid"].get!string;
                 logInfo("Socket.IO: Connect packet");
                 break;
             case '1':

@@ -11,14 +11,14 @@ import allib;
 void main()
 {
 	ALSession session = ALSession.INSTANCE();
-	ALClient frumpyBrute = session.createClient("FrumpyBrute","ASIAI");
+	ALClient frumpyBrute = session.createClient("FrumpyBrute");
 	new Thread(() => initClient(frumpyBrute)).start();
 
 
-	ALClient frumpyRanger = session.createClient("FrumpyRanger","ASIAI");
+	ALClient frumpyRanger = session.createClient("FrumpyRanger");
 	new Thread(() => initClient(frumpyRanger)).start();
 
-	ALClient frumpyHealer = session.createClient("FrumpyHealer","ASIAI");
+	ALClient frumpyHealer = session.createClient("FrumpyHealer");
 	new Thread(() => initClient(frumpyHealer)).start();
 
     //startMonitor([frumpyBrute, frumpyRanger, frumpyHealer]);

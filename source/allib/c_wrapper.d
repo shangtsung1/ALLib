@@ -288,7 +288,15 @@ extern(C) ALClientHandle* allib_create_client(ALSessionHandle* session_ptr, cons
 }
 
 extern(C) void allib_free_client(ALClientHandle* client_ptr) {}
+
+import core.thread;
 extern(C) void allib_start_client(ALClientHandle* client_ptr, ScriptCallback script_cb) {
+    auto client = cast(ALClient)(cast(void*)client_ptr);
+    new Thread(() => 
+    client.start((ALClient c) => dur!"msecs"(script_cb(client_ptr)))).start();
+}
+
+extern(C) void allib_start_client_blocking(ALClientHandle* client_ptr, ScriptCallback script_cb) {
     auto client = cast(ALClient)(cast(void*)client_ptr);
     client.start((ALClient c) => dur!"msecs"(script_cb(client_ptr)));
 }

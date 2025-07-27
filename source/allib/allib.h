@@ -83,6 +83,7 @@ void allib_run_app(void);
 ALClientHandle* allib_create_client(ALSessionHandle* session_ptr, const char* char_name, const char* server);
 void allib_free_client(ALClientHandle* client_ptr);
 void allib_start_client(ALClientHandle* client_ptr, ScriptCallback script_cb, EventCallback event_cb);
+void allib_start_client_blocking(ALClientHandle* client_ptr, ScriptCallback script_cb, EventCallback event_cb);
 
 // Entity
 ALEntity allib_get_entity(ALClientHandle* client_ptr);
