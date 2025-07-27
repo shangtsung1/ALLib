@@ -159,15 +159,18 @@ class ALClient{
         try if(socket !is null) socket.close(); catch(Throwable) {}
         socket = null;
         running = true;
+        sid = null;
         awaitingAuth = true;
         monsters = typeof(monsters).init;
         players = typeof(players).init;
         pathwalker = new Pathwalker(this);
+        player = Entity.init;
     }
 
     void start(Duration delegate(ALClient) script){
         fireInit();
         while(running){
+            socket = null;
             auto url = URL(protocol~"://" ~ serverInfo["addr"].get!string ~ ":" ~ serverInfo["port"].get!int.to!string ~ "/socket.io/?EIO=4&transport=websocket");
             if(sid !is null){
                 url =  URL(protocol~"://" ~ serverInfo["addr"].get!string ~ ":" ~ serverInfo["port"].get!int.to!string ~ "/socket.io/?EIO=4&transport=websocket&sid=" ~ sid);
@@ -188,7 +191,9 @@ class ALClient{
             } catch (Throwable t) {
                 logError(t.msg, t);
                 if(socket !is null)socket.close();
-                return;
+                Thread.sleep(failTime.msecs);
+                socket = null;
+                continue;
             }
             long lastPing = lastEpoch();
             long lastUpdate = lastEpoch();
@@ -601,7 +606,10 @@ class ALClient{
 
     void parseEntities(JSONValue msg, bool b) {
         if(!b){
-            string type = msg["type"].get!string;
+            string type = "";
+            if("type" in msg.object){
+                type = msg["type"].get!string;
+            }
             if (type == "all" && awaitingAuth) {
                 login();
                 return;
@@ -611,6 +619,7 @@ class ALClient{
         if ("players" in msg) {
             auto playerz = msg["players"].array;
             foreach (playar; playerz) {
+                if("id" !in playar.object) continue;
                 string id = playar["id"].get!string;
                 players[id] = Entity.fromJson(playar);
                 if(id == player.id){
@@ -622,6 +631,7 @@ class ALClient{
         if ("monsters" in msg) {
             auto monsterz = msg["monsters"].array;
             foreach (monster; monsterz) {
+                if("id" !in monster.object) continue;
                 string id = monster["id"].get!string; 
                 monsters[id] = Entity.fromJson(monster);
             }
@@ -687,6 +697,8 @@ class ALClient{
     }
 
     void moveTowards( double targetX, double targetY, double fraction) {
+        if(fraction < 0) fraction = 0;
+        if(fraction > 1) fraction = 1;
         double currentX = player.x;
         double currentY = player.y;
 
@@ -739,8 +751,8 @@ class ALClient{
                 string sharedSkill = skillObj["share"].get!string;
                 auto sharedObj = skills[sharedSkill];
                 long sharedCooldown = sharedObj["cooldown"].get!long;
-                long multiplier = "cooldown_multiplier" in skillObj.object ? skillObj["cooldown_multiplier"].get!long : 1;
-                time = sharedCooldown * multiplier;
+                double multiplier = "cooldown_multiplier" in skillObj.object ? skillObj["cooldown_multiplier"].get!double : 1.0;
+                time = cast(long)(sharedCooldown * multiplier);
             }
         } else if (name == "attack" && ms < 0) {
             time = cast(long)(1000.0 / player.frequency);
@@ -1101,7 +1113,7 @@ class ALClient{
     }
 
     bool unequip(int slot) { emit("unequip", json(["slot": JSONValue(slot)])); return true; }
-    bool use(int slot) { emit("equip", json(["num": JSONValue(slot)])); return true;}
+    bool use(int slot) { emit("use", json(["num": JSONValue(slot)])); return true;}
     bool use(string item) { emit("use", json(["item": JSONValue(item)])); return true;}
     void useMp(){
         use("mp");
@@ -1471,7 +1483,7 @@ class ALClient{
         JSONValue json = parseJSON(data);
         if(json.type != JSONType.array) return;
 
-        foreach (entry; json.array()) {
+        foreach (entry; json.array) {
             string key = entry["key"].get!string;
             string type = entry["type"].get!string;
             JSONValue value = entry["value"];
@@ -1497,6 +1509,75 @@ class ALClient{
 
             attachments[key] = obj;
         }
+    }
+
+    double healthPercent() { return player.max_hp == 0 ? 0.0 : cast(double)player.hp / player.max_hp; }
+
+    double manaPercent() { return player.max_mp == 0 ? 0.0 : cast(double)player.mp / player.max_mp; }
+
+    bool isInParty() { return party.length > 0; }
+
+    int inventorySize() { return cast(int)player.inventory.length; }
+
+    int freeInventorySlots() {
+        int count = 0;
+        foreach (it; player.inventory) if(!it.valid) count++;
+        return count;
+    }
+
+    bool inventoryFull() { return freeInventorySlots() == 0; }
+
+    int countItem(string name) {
+        int c = 0;
+        foreach(it; player.inventory) if(it.valid && it.name == name) c += it.q > 0 ? it.q : 1;
+        return c;
+    }
+
+    int findItemSlot(string name) {
+        foreach(i, it; player.inventory) if(it.valid && it.name == name) return cast(int)i;
+        return -1;
+    }
+
+    bool hasItem(string name) { return countItem(name) > 0; }
+
+    Entity[] getMonstersInRange(double range) {
+        return monsters.byValue
+            .filter!(m => distance(player.x, player.y, m.x, m.y) <= range)
+            .map!(m => cast(Entity)m)
+            .array;
+    }
+
+    Entity[] getPlayersInRange(double range) {
+        return players.byValue
+            .filter!(p => p.id != player.id && distance(player.x, player.y, p.x, p.y) <= range)
+            .map!(p => cast(Entity)p)
+            .array;
+    }
+
+    Entity[] getEntitiesInRange(double range) {
+        return chain(getPlayersInRange(range), getMonstersInRange(range)).array;
+    }
+
+    double timeSinceLastMove() { return (lastEpoch() - player.move_started) / 1000.0; }
+
+    long timeUntilSkill(string name) { return skillCooldownRemaining(name); }
+
+    bool isPathing() { return pathwalker.hasPath(); }
+
+    void cancelPath() { pathwalker.reset(); }
+
+    JSONValue getSkillData(string skill) {
+        auto skills = session.G["skills"];
+        return skill in skills.object ? skills[skill] : JSONValue();
+    }
+
+    double distanceToPoint(double[2] pt) { return distanceTo(pt[0], pt[1]); }
+
+    Entity[] getPartyMembers() {
+        return players.byValue
+            .filter!(p => p.party.length && p.party == player.party && p.id != player.id)
+            .map!(p => cast(Entity)p)
+            .array;
     }
 
     void bankPacksInit(){

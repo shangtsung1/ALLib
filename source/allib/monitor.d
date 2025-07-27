@@ -117,10 +117,15 @@ void index(HTTPServerResponse res) {
 }
 
 void startMonitor(ALClient[] clients) {
-    auto settings = new HTTPServerSettings;
-    settings.port = 9001;
-    settings.bindAddresses = ["0.0.0.0"];
-    auto router = new URLRouter;
-    router.registerWebInterface(new MonitorService(clients));
-    listenHTTP(settings, router);
+    runTask( () nothrow {
+        try {
+            auto settings = new HTTPServerSettings;
+            settings.port = 9001;
+            settings.bindAddresses = ["0.0.0.0"];
+            auto router = new URLRouter;
+            router.registerWebInterface(new MonitorService(clients));
+            listenHTTP(settings, router);
+        } catch (Throwable) {
+        }
+    });
 }

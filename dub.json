@@ -17,7 +17,6 @@
 	],
 	"copyright": "Copyright © 2025, Jordan",
 	"dependencies": {
-		"derelict-sdl2": "~>2.1.4",
 		"vibe-d": "~>0.10.2"
 	},
 	"description": "A minimal D application.",

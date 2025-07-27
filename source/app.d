@@ -5,61 +5,56 @@ import core.thread;
 
 import vibe.vibe : runApplication,runTask;
 import allib;
-
-
+import std.file;
+import std.json;
+import std.datetime;
+import std.conv;
 
 void main()
 {
 	ALSession session = ALSession.INSTANCE();
 	ALClient frumpyBrute = session.createClient("FrumpyBrute");
-	new Thread(() => initClient(frumpyBrute)).start();
+	new Thread(() => initClient(frumpyBrute,JSONValue())).start();
 
 
 	ALClient frumpyRanger = session.createClient("FrumpyRanger");
-	new Thread(() => initClient(frumpyRanger)).start();
+	new Thread(() => initClient(frumpyRanger,JSONValue())).start();
 
 	ALClient frumpyHealer = session.createClient("FrumpyHealer");
-	new Thread(() => initClient(frumpyHealer)).start();
-
-    //startMonitor([frumpyBrute, frumpyRanger, frumpyHealer]);
+	new Thread(() => initClient(frumpyHealer,JSONValue())).start();
 
 	runApplication();
 }
 
-void initClient(ALClient c) nothrow{
-	try{
-		c.start((ALClient a){
-				switch(a.player.ctype){
-					case "warrior":
-					case "paladin":
-					case "rogue":
-					case "ranger":
-					case "mage":
-					case "priest":
-						return killGoo(a);
-						break;
-					case "merchant":
-						break;
-					default:
-						logError("unknown class",a.player.ctype);
-				}
-			 	return 1000.msecs;
-			 });
-	}
-	catch(Throwable t){
-		try{
-			logError(t);
-		}catch(Throwable tt){
-		}
-	}
+void initClient(ALClient c, JSONValue args) nothrow{
+    try{
+        c.start((ALClient a){
+        	return killStuff(a, args);
+        });
+    }
+    catch(Throwable t){
+        try{
+            logError(t);
+        }catch(Throwable tt){
+        }
+    }
 }
 
-string targetName = "goo";
-float targetX = -36;
-float targetY = 705;
-string targetMap = "main";
 
-Duration killGoo(ALClient client){
+Duration killStuff(ALClient client, JSONValue args){
+
+	string targetName = "goo";
+    double targetX = -36;
+    double targetY = 705;
+    string targetMap = "main";
+
+    if(args.type == JSONType.object){
+        if("targetName" in args) targetName = args["targetName"].get!string;
+        if("targetX" in args) targetX = args["targetX"].get!double;
+        if("targetY" in args) targetY = args["targetY"].get!double;
+        if("targetMap" in args) targetMap = args["targetMap"].get!string;
+    }
+
 	if (client.player.rip) {
         client.respawn();
         logWarn("Respawn");
