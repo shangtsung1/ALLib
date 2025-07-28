@@ -413,6 +413,7 @@ class ALClient{
     mixin ListenerSet!("QData", JSONValue);
     mixin ListenerSet!("Upgrade", JSONValue);
     mixin ListenerSet!("GameLog", JSONValue);
+    mixin ListenerSet!("ServerInfo", JSONValue);
     void parsePacket(string event,string[] msgs){
         try
         {
@@ -578,7 +579,9 @@ class ALClient{
                     break;
 
                 case "game_response":
-                    logInfo("GameResponse: ",msg);
+                    if("success" !in msg || !msg["success"].get!bool){
+                        logInfo("GameResponse: ",msg);
+                    }
                     fireGameResponse(msg);
                     break;
 
@@ -592,10 +595,14 @@ class ALClient{
 
                 case "game_log":
                     fireGameLog(msg);
-                    logInfo("TODOE=",event," MSG=",msg);
+                    logInfo(event," MSG=",msg);
                     //if(msg.type == JSONType.string && msg.get!string == "This might have happened if your network is too slow"){
                     //    socket.disconnect();
                     //}
+                break;
+                case "server_info":
+                    requestUpdate();
+                    fireServerInfo(msg);
                 break;
                 default:
                     logError("EVENT=",event," MSG=",msg);
@@ -610,8 +617,12 @@ class ALClient{
         }
     }
 
-        double lerp(double a, double b, double t) {
+    double lerp(double a, double b, double t) {
         return a + (b - a) * t;
+    }
+
+    void requestUpdate(){
+        emit("send_updates",JSONValue.emptyObject);
     }
 
     void lerpEntity(Entity entity) {
