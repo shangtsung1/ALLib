@@ -21,3 +21,6 @@ to compile as library
 ```
 dub build --config=cwrapper
 ```
+
+
+The C_Wrapper is work in progress.
